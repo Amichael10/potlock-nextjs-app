@@ -4,20 +4,28 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 
+import { DEBUG } from "@/common/constants";
 import useIsClient from "@/common/lib/useIsClient";
 import { cn } from "@/common/ui/utils";
 import { SignInButton, useAuth } from "@/modules/auth";
 import { CartLink } from "@/modules/cart";
 
 import { UserDropdown } from "./UserDropdown";
-import routesPath from "../routes";
+import routesPath, { hrefByRouteName } from "../routes";
 
 const links = [
   { label: "Projects", url: routesPath.PROJECTS_LIST, disabled: false },
   { label: "Pots", url: routesPath.POTS, disabled: false },
+  { label: "Campaigns", url: routesPath.CAMPAIGNS, disabled: false },
+
   { label: "Feed", url: routesPath.FEED, disabled: false },
   // { label: "Donors", url: routesPath.DONORS, disabled: false },
-  { label: "Lists", url: routesPath.LIST, disabled: false },
+
+  {
+    label: "Lists",
+    url: routesPath.LIST,
+    disabled: false,
+  },
 ];
 
 const AuthButton = () => {
@@ -58,17 +66,18 @@ const MobileNav = () => {
 
   return (
     <nav className="flex flex-col gap-4 p-6">
-      {links.map(({ url, label }) => {
+      {links.map(({ url, label, disabled }) => {
         const isActive = isClient ? url === router.pathname : false;
 
         return (
           <Link
             key={url + label}
-            href={url}
+            href={disabled ? hrefByRouteName.CURRENT : url}
             className={cn(
               "decoration-none not-last-child hover:decoration-none relative mr-8 text-sm",
 
               {
+                "cursor-not-allowed opacity-20": disabled,
                 "font-medium": isActive,
                 "font-normal text-neutral-500": !isActive,
               },
@@ -89,7 +98,7 @@ export const Nav = () => {
 
   return (
     <>
-      <nav className="max-sm:px-1 md:h-[96px] 2xl-container z-50 flex w-full content-between items-center justify-between self-stretch bg-transparent px-[40px] pb-6 pt-6">
+      <nav className="max-sm:px-1 md:h-[96px] 2xl-container z-50 mx-auto flex w-full content-between items-center justify-between self-stretch bg-transparent px-10 pb-6 pt-6">
         {/* Left */}
         <div className="flex">
           <div className="mr-12 flex flex-row items-center justify-center">
@@ -113,16 +122,17 @@ export const Nav = () => {
 
           <div className="flex flex-row items-center justify-center">
             <div className="max-md:hidden flex flex-row items-center justify-center">
-              {links.map(({ url, label }) => {
+              {links.map(({ url, label, disabled }) => {
                 const isActive = isClient ? url === router.pathname : false;
                 return (
                   <Link
                     key={url + label}
-                    href={url}
+                    href={disabled ? hrefByRouteName.CURRENT : url}
                     className={cn(
                       "decoration-none not-last-child hover:decoration-none relative mr-8 text-sm",
 
                       {
+                        "cursor-not-allowed opacity-20": disabled,
                         "font-medium": isActive,
                         "font-normal text-neutral-500": !isActive,
                       },

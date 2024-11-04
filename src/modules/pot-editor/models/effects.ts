@@ -1,8 +1,8 @@
 import { ExecutionStatusBasic } from "near-api-js/lib/providers/provider";
 import { omit } from "remeda";
 
+import { ByPotId } from "@/common/api/indexer";
 import { nearRpc, walletApi } from "@/common/api/near";
-import { ByPotId } from "@/common/api/potlock";
 import {
   PotConfig,
   PotDeploymentResult,
@@ -57,7 +57,7 @@ export const effects = (dispatch: AppDispatcher) => ({
         potFactory
           .deploy_pot({
             pot_args,
-            pot_handle,
+            pot_handle: (pot_handle?.length ?? 0) > 0 ? pot_handle : undefined,
           })
           .then(dispatch.potEditor.handleDeploymentSuccess)
           .catch(dispatch.potEditor.deploymentFailure);
