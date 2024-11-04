@@ -2,11 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FieldErrors, SubmitHandler, useForm, useWatch } from "react-hook-form";
-import { omit } from "remeda";
+import { entries } from "remeda";
+import { Temporal } from "temporal-polyfill";
 import { ZodError } from "zod";
 
+import { StatusF24Enum, indexer } from "@/common/api/indexer";
 import { walletApi } from "@/common/api/near";
-import { StatusF24Enum, potlock } from "@/common/api/potlock";
 import { NEAR_TOKEN_DENOM } from "@/common/constants";
 import { toChronologicalOrder } from "@/common/lib";
 import { useIsHuman } from "@/modules/core";
@@ -41,19 +42,27 @@ export const useDonationForm = ({
   const isSingleProjectDonation = "accountId" in params;
   const isPotDonation = "potId" in params;
   const isListDonation = "listId" in params;
+  const isCampaignDonation = "campaignId" in params;
   const potAccountId = isPotDonation ? params.potId : undefined;
   const listId = isListDonation ? params.listId : undefined;
+  const campaignId = isCampaignDonation ? params.campaignId : undefined;
 
   const recipientAccountId = isSingleProjectDonation
     ? params.accountId
     : undefined;
 
-  const { data: matchingPotsPaginated } = potlock.useAccountActivePots({
+  const { data: recipientActivePots = [] } = indexer.useAccountActivePots({
     accountId: recipientAccountId,
     status: StatusF24Enum.Approved,
+    page_size: 999,
   });
 
-  const matchingPots = matchingPotsPaginated?.results ?? [];
+  const matchingPots = recipientActivePots.filter(
+    ({ matching_round_start }) =>
+      Temporal.Now.instant()
+        .since(Temporal.Instant.from(matching_round_start))
+        .total("milliseconds") > 0,
+  );
 
   const defaultPotAccountId = toChronologicalOrder(
     "matching_round_end",
@@ -68,12 +77,14 @@ export const useDonationForm = ({
       referrerAccountId,
       potAccountId: isPotDonation ? potAccountId : defaultPotAccountId,
       listId,
+      campaignId,
 
-      allocationStrategy: isSingleProjectDonation
-        ? DonationAllocationStrategyEnum[
-            matchingPots.length > 0 ? "split" : "full"
-          ]
-        : DonationAllocationStrategyEnum.split,
+      allocationStrategy:
+        isSingleProjectDonation || isCampaignDonation
+          ? DonationAllocationStrategyEnum[
+              matchingPots.length > 0 ? "split" : "full"
+            ]
+          : DonationAllocationStrategyEnum.split,
 
       groupAllocationStrategy:
         DonationGroupAllocationStrategyEnum[
@@ -85,7 +96,9 @@ export const useDonationForm = ({
       defaultPotAccountId,
       isPotDonation,
       isSingleProjectDonation,
+      isCampaignDonation,
       listId,
+      campaignId,
       matchingPots.length,
       potAccountId,
       recipientAccountId,
@@ -95,9 +108,9 @@ export const useDonationForm = ({
 
   const self = useForm<DonationInputs>({
     resolver: zodResolver(donationSchema),
-    mode: "onChange",
+    mode: "all",
     defaultValues,
-    resetOptions: { keepDirtyValues: true },
+    resetOptions: { keepDirtyValues: false },
   });
 
   const values = useWatch(self);
@@ -105,12 +118,13 @@ export const useDonationForm = ({
   const tokenId = values.tokenId ?? NEAR_TOKEN_DENOM;
   const { balanceFloat } = useTokenBalance({ tokenId });
 
-  const totalAmountFloat = isSingleProjectDonation
-    ? amount
-    : (values.groupAllocationPlan?.reduce(
-        (total, { amount }) => total + (amount ?? 0.0),
-        0.0,
-      ) ?? 0.0);
+  const totalAmountFloat =
+    isSingleProjectDonation || isCampaignDonation
+      ? amount
+      : (values.groupAllocationPlan?.reduce(
+          (total, { amount }) => total + (amount ?? 0.0),
+          0.0,
+        ) ?? 0.0);
 
   const [crossFieldErrors, setCrossFieldErrors] = useState<
     FieldErrors<DonationInputs>
@@ -140,10 +154,13 @@ export const useDonationForm = ({
     [values],
   );
 
-  const hasChanges = Object.keys(values).some(
-    (key) =>
-      values[key as keyof DonationInputs] !==
-      defaultValues[key as keyof DonationInputs],
+  const hasChanges = useMemo(
+    () =>
+      entries(values).some(
+        ([key, value]) => value !== defaultValues[key as keyof DonationInputs],
+      ),
+
+    [defaultValues, values],
   );
 
   const isBalanceSufficient = totalAmountFloat < (balanceFloat ?? 0);
@@ -186,6 +203,12 @@ export const useDonationForm = ({
     params,
     isSingleProjectDonation,
   ]);
+
+  // console.log(values.groupAllocationPlan);
+
+  // console.table({ hasChanges, isValid: self.formState.isValid });
+
+  // console.log(JSON.stringify(self.formState, null, 2));
 
   return {
     form: {

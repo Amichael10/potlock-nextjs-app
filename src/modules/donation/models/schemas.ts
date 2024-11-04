@@ -59,6 +59,7 @@ export const donationSchema = object({
   referrerAccountId: string().optional().describe("Referrer account id."),
   potAccountId: string().optional().describe("Pot account id."),
   listId: number().optional().describe("List id."),
+  campaignId: number().optional().describe("Campaign id."),
 
   message: string()
     .max(DONATION_MAX_MESSAGE_LENGTH)
@@ -76,9 +77,7 @@ export const donationSchema = object({
   groupAllocationPlan: array(
     object({ account_id: string(), amount: donationAmount.optional() }),
   )
-    .refine((recipients) => recipients.length > 0, {
-      message: "You have to select at least one recipient.",
-    })
+    .min(1, { message: "You have to select at least one recipient." })
     .optional(),
 
   bypassProtocolFee: boolean().default(false),
