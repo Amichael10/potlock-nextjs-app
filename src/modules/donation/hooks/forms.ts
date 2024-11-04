@@ -204,12 +204,6 @@ export const useDonationForm = ({
     isSingleProjectDonation,
   ]);
 
-  // console.log(values.groupAllocationPlan);
-
-  // console.table({ hasChanges, isValid: self.formState.isValid });
-
-  // console.log(JSON.stringify(self.formState, null, 2));
-
   return {
     form: {
       ...self,
