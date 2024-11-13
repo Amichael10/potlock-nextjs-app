@@ -1,15 +1,13 @@
 import Link from "next/link";
 
 import { indexer } from "@/common/api/indexer";
+import { NATIVE_TOKEN_ID } from "@/common/constants";
 import { PayoutDetailed } from "@/common/contracts/potlock";
 import { truncate, yoctoNearToFloat } from "@/common/lib";
+import { ftService } from "@/common/services";
 import { Button } from "@/common/ui/components";
 import { cn } from "@/common/ui/utils";
-import {
-  AccountProfileCover,
-  AccountProfilePicture,
-  useNearUsdDisplayValue,
-} from "@/modules/core";
+import { AccountProfileCover, AccountProfilePicture } from "@/modules/core";
 import routesPath from "@/modules/core/routes";
 import { useDonation } from "@/modules/donation";
 
@@ -40,9 +38,10 @@ export const ProjectCard = ({
     accountId: projectId,
   });
 
-  const estimatedMatchedAmount = useNearUsdDisplayValue(
-    yoctoNearToFloat(payoutDetails?.amount ?? "0"),
-  );
+  const estimatedMatchedAmount = ftService.useTokenUsdDisplayValue({
+    amountFloat: yoctoNearToFloat(payoutDetails?.amount ?? "0"),
+    tokenId: NATIVE_TOKEN_ID,
+  });
 
   const { name, description, plCategories } =
     account?.near_social_profile_data ?? {};
@@ -111,20 +110,18 @@ export const ProjectCard = ({
 
             {/* Donations */}
             <div className="mt-auto flex items-center gap-4">
-              {account?.total_donations_in_usd && (
-                <div className="flex flex-row items-center gap-2">
-                  <div
-                    className="text-lg font-semibold leading-6 text-[#292929]"
-                    data-testid="project-card-fundraising-amount"
-                  >
-                    {`$${account?.total_donations_in_usd}`}
-                  </div>
-
-                  <div className="text-sm font-medium leading-4  text-neutral-600">
-                    Raised
-                  </div>
+              <div className="flex flex-row items-center gap-2">
+                <div
+                  className="text-lg font-semibold leading-6 text-[#292929]"
+                  data-testid="project-card-fundraising-amount"
+                >
+                  {`$${account?.total_donations_in_usd ?? "0"}`}
                 </div>
-              )}
+
+                <div className="text-sm font-medium leading-4  text-neutral-600">
+                  Raised
+                </div>
+              </div>
 
               {payoutDetails && (
                 <div className="flex flex-row items-center gap-2">
